@@ -14,14 +14,19 @@
 ![液态玻璃主题（深色）](docs/screenshots/liquid-dark.jpg)
 
 <table><tr>
-<td><img src="docs/screenshots/glass-dark.png" alt="玻璃"><br>glass 玻璃</td>
+<td><img src="docs/screenshots/glass-dark.jpg" alt="玻璃"><br>glass 玻璃</td>
 <td><img src="docs/screenshots/liquid-light.jpg" alt="液态玻璃（浅色）"><br>liquid 液态玻璃 · 浅色</td>
 </tr><tr>
-<td><img src="docs/screenshots/paper-light.png" alt="简洁"><br>paper 简洁</td>
-<td><img src="docs/screenshots/terminal-dark.png" alt="终端"><br>terminal 终端</td>
+<td><img src="docs/screenshots/paper-light.jpg" alt="简洁"><br>paper 简洁</td>
+<td><img src="docs/screenshots/terminal-dark.jpg" alt="终端"><br>terminal 终端</td>
 </tr></table>
 
-截图是演示数据：任意部署后的工作台地址加 `?demo` 就能看到。
+<table><tr>
+<td><img src="docs/screenshots/detail.jpg" alt="详细指标"><br>详细指标（点「详情」或按 D）</td>
+<td width="30%"><img src="docs/screenshots/mobile.jpg" alt="手机"><br>手机</td>
+</tr></table>
+
+整页一屏放下，不用滚动：上面一条是机器指标，下面是服务，服务越多排得越紧凑。截图是演示数据：任意部署后的工作台地址加 `?demo` 就能看到。
 
 ```
 手机 / 笔记本 ──Tailscale──▶ desk.example.com ──▶ Caddy（证书、只放行 Tailscale）──▶ 各个服务
@@ -81,6 +86,7 @@ bin/homelab-desk deploy      # 生成并启用一切，可重复执行
 全部在一个 `services.yaml` 里，见 [examples/services.example.yaml](examples/services.example.yaml)。改完运行 `deploy`。
 
 - **主题**：`glass`（玻璃）/ `liquid`（苹果液态玻璃）/ `paper`（简洁）/ `terminal`（终端），每套都有深浅两种。`appearance: auto / light / dark` 指定深浅，页面右上角也能随手切换。地址后加 `?theme=liquid` 可以先预览。
+- **布局**：桌面上整页一屏放下。指标缩成一条，大图表收在「详情」浮层里（按 `D`，或地址加 `?detail`）；服务按分组排成列表，按屏幕高度在四档疏密间自动选择。
 - **图表**：每套主题有自己的画法——面积曲线、柱状、字符块；进度条、圆环、分段格。`charts:` 里可以单独换。仪表盘上有 CPU 每个核心、内存构成、下载与上传两条线、每个服务近 1 小时的在线记录，曲线可在 5 分钟 / 1 小时之间切换。
 - **插件**：温度、GPU、UPS / 电池、体检通知，也可以自己写。见 [docs/plugins.md](docs/plugins.md)。
 - **推荐服务**：影音、相册、密码、广告过滤、自动化、智能家居、AI、文件同步、笔记、开发、监控、下载、阅读，共 30 项，每项写明适合谁、怎么装、放到反向代理后要注意什么。见 [catalog/services.yaml](catalog/services.yaml)。

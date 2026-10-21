@@ -88,15 +88,17 @@ const Charts = (() => {
 
   // ── 趋势 ──
   // series: [{ label, color: 'var(--s1)', points: [{t, v}] }]
-  // opts: { key, kind, max（固定上限）, floor / cap（自动上限的下限 / 上限）, fmt(v), time(t), small, mirror（两条序列上下对称，用于收/发）}
+  // opts: { key, kind, max（固定上限）, floor / cap（自动上限的下限 / 上限）, fmt(v), time(t),
+  //         small / mini（矮一些 / 指标条里的迷你图，不标刻度）, mirror（两条序列上下对称，用于收/发）}
   function trend(series, opts) {
     const kind = opts.kind || 'area';
     const all = series.flatMap(s => s.points.map(p => p.v));
     const top = opts.max ?? Math.min(niceMax(Math.max(opts.floor ?? 0, ...all, 0) * 1.1), opts.cap ?? Infinity);
-    const wrap = el('div', { class: `chart trend trend-${kind}${opts.small ? ' small' : ''}` });
+    const size = opts.mini ? ' mini' : opts.small ? ' small' : '';
+    const wrap = el('div', { class: `chart trend trend-${kind}${size}` });
     const scale = el('span', { class: 'chart-scale' }, opts.fmt(top));
     if (!series[0] || series[0].points.length < 2) {
-      wrap.append(el('div', { class: 'chart-empty' }, '数据收集中…'));
+      wrap.append(el('div', { class: 'chart-empty' }, opts.mini ? '' : '数据收集中…'));
       return wrap;
     }
     if (kind === 'blocks') return blocks(series, top, opts, wrap);
@@ -167,7 +169,7 @@ const Charts = (() => {
   }
 
   function blocks(series, top, opts, wrap) {
-    const n = 32;
+    const n = opts.mini ? 20 : 32;
     for (const [si, s] of series.entries()) {
       const pts = downsample(s.points, n);
       const chars = pts.map(p => el('span', {}, BLOCKS[Math.max(0, Math.min(7, Math.round((Math.min(p.v, top) / top) * 7)))]));
@@ -200,13 +202,13 @@ const Charts = (() => {
     if (kind === 'segments') {
       const n = opts.cells || 20, on = Math.round((pct / 100) * n);
       const cells = Array.from({ length: n }, (_, i) => el('i', { class: i < on ? 'on' : '' }));
-      return el('div', { class: `gauge segments ${level}`, ...aria }, cells);
+      return el('div', { class: `gauge segments ${level}`, style: `--n:${n}`, ...aria }, cells);
     }
     return el('div', { class: `gauge bar ${level}`, ...aria }, el('span', { style: `width:${pct.toFixed(1)}%` }));
   }
 
   // ── 内存构成：堆叠条 + 图例。parts: [{label, bytes, color}]，剩下的是空闲 ──
-  function stack(parts, total, fmt, key) {
+  function stack(parts, total, fmt, key, withLegend = true) {
     const bar = el('div', { class: 'stack' });
     for (const p of parts) {
       const w = (p.bytes / total) * 100;
@@ -215,6 +217,7 @@ const Charts = (() => {
       hoverable(seg, `${key}-${p.label}`, e => showTip(e, `${p.label} ${fmt(p.bytes)}（${w.toFixed(0)}%）`));
       bar.append(seg);
     }
+    if (!withLegend) return el('div', { class: 'stack-wrap' }, bar);
     const legend = el('div', { class: 'legend' }, parts.map(p =>
       el('span', { class: 'legend-item' }, el('i', { style: `background:${p.color}` }), `${p.label} `, el('b', {}, fmt(p.bytes)))));
     return el('div', { class: 'stack-wrap' }, bar, legend);

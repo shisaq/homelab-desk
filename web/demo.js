@@ -26,6 +26,13 @@
     shortcuts: [{ title: 'SSH · 屏幕共享', value: 'home-mini', icon: SI('tailscale') }],
   };
 
+  // ?demo=30：凑够指定数量的服务，看服务多时的排版
+  const want = parseInt(new URLSearchParams(location.search).get('demo'), 10);
+  for (let i = 0; want > config.services.length; i++) {
+    const b = config.services[i];
+    config.services.push({ ...b, name: `${b.name}${i}`, title: `${b.title} ${i + 2}`, group: ['影音与相册', '日常', 'AI', '家里其他设备', '开发'][i % 5] });
+  }
+
   // 可复现的伪随机：同一时刻画出来的图一样
   function noise(seed) {
     let x = Math.sin(seed * 12.9898) * 43758.5453;

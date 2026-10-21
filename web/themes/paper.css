@@ -53,6 +53,6 @@
 :root[data-scheme="dark"] .icon:not(.color) { background: color-mix(in srgb, var(--c) 22%, var(--card)); }
 :root[data-scheme="dark"] .icon i { background: color-mix(in srgb, var(--c) 70%, #fff); }
 :root[data-scheme="dark"] .icon.letter b { color: color-mix(in srgb, var(--c) 70%, #fff); }
-.card:hover { transform: none; }
+.panel { box-shadow: var(--shadow); }
 h1 { font-weight: 650; }
 .range button[aria-pressed="true"] { background: var(--text); color: var(--bg); }

@@ -36,35 +36,42 @@
       </div>
     </div>
     <div class="meta">
-      <div class="meta-row">
-        <button class="scheme" id="scheme" type="button" title="切换深浅色"></button>
-        <div class="clock" id="clock">--:--</div>
-      </div>
       <div class="summary" id="summary"><span class="dot"></span><span>检测中…</span></div>
+      <div class="clock" id="clock">--:--</div>
+      <button class="scheme" id="scheme" type="button" title="切换深浅色"></button>
     </div>
   </header>
 
-  <section id="machine" hidden>
+  <!-- 指标条：每项只有数字和一个小图；点「详情」看大图 -->
+  <section class="strip" id="strip" hidden>
+    <div class="metrics" id="metrics"></div>
+    <button class="more" id="more" type="button" title="详细指标（D）">详情</button>
+  </section>
+
+  <!-- 服务：主体，按分组排成列表，空间不够时只在这里滚动 -->
+  <div class="groups" id="groups"></div>
+
+  <footer>
+    <div class="chips" id="shortcuts"></div>
+    <span class="hint" id="footer"></span>
+  </footer>
+</main>
+
+<!-- 详细指标浮层 -->
+<div class="detail" id="detail" hidden>
+  <div class="detail-panel" role="dialog" aria-modal="true" aria-labelledby="machine-title">
     <div class="section-head">
       <h2 id="machine-title">本机</h2>
       <div class="range" role="group" aria-label="曲线时间范围">
         <button type="button" data-range="5m" aria-pressed="true">5 分钟</button>
         <button type="button" data-range="1h" aria-pressed="false">1 小时</button>
       </div>
+      <button class="close" id="close" type="button" title="关闭（Esc）" aria-label="关闭">✕</button>
     </div>
     <p class="hostline" id="hostline"></p>
     <div class="tiles" id="tiles"></div>
-  </section>
-
-  <div id="groups"></div>
-
-  <section id="shortcuts-section" hidden>
-    <h2>在 App 里填写</h2>
-    <div class="chips" id="shortcuts"></div>
-  </section>
-
-  <footer id="footer"></footer>
-</main>
+  </div>
+</div>
 
 <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
 <script src="charts.js"></script>

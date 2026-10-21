@@ -14,14 +14,19 @@ A **desk** for every service on the always-on machine at home (Mac mini first, L
 ![Liquid glass theme (dark)](docs/screenshots/liquid-dark.jpg)
 
 <table><tr>
-<td><img src="docs/screenshots/glass-dark.png" alt="glass"><br>glass</td>
+<td><img src="docs/screenshots/glass-dark.jpg" alt="glass"><br>glass</td>
 <td><img src="docs/screenshots/liquid-light.jpg" alt="liquid, light"><br>liquid · light</td>
 </tr><tr>
-<td><img src="docs/screenshots/paper-light.png" alt="paper"><br>paper</td>
-<td><img src="docs/screenshots/terminal-dark.png" alt="terminal"><br>terminal</td>
+<td><img src="docs/screenshots/paper-light.jpg" alt="paper"><br>paper</td>
+<td><img src="docs/screenshots/terminal-dark.jpg" alt="terminal"><br>terminal</td>
 </tr></table>
 
-Screenshots use demo data: append `?demo` to any deployed dashboard URL.
+<table><tr>
+<td><img src="docs/screenshots/detail.jpg" alt="detailed metrics"><br>detailed metrics (click 详情 or press D)</td>
+<td width="30%"><img src="docs/screenshots/mobile.jpg" alt="phone"><br>phone</td>
+</tr></table>
+
+The whole page fits on one screen: a strip of machine metrics on top, your services below, packed tighter as the list grows. Screenshots use demo data: append `?demo` to any deployed dashboard URL.
 
 ```
 phone / laptop ──Tailscale──▶ desk.example.com ──▶ Caddy (certs, Tailscale-only) ──▶ your services
@@ -83,6 +88,7 @@ Command output and the dashboard are in Chinese for now.
 Everything lives in one `services.yaml`; see [examples/services.example.yaml](examples/services.example.yaml). Run `deploy` after editing.
 
 - **Themes**: `glass` / `liquid` (Apple-style liquid glass) / `paper` / `terminal`, each in light and dark. `appearance: auto / light / dark` sets the default; a button in the top-right corner switches it on the fly. Append `?theme=liquid` to the URL to preview.
+- **Layout**: on desktop everything fits on one screen. Metrics are a single strip; the big charts live in a detail overlay (press `D`, or append `?detail`). Services are grouped lists that pick one of four densities to fit the screen height.
 - **Charts**: each theme has its own chart style — area, bars or text blocks for trends; bars, rings or segments for gauges — overridable under `charts:`. The dashboard shows per-core CPU, memory composition, download and upload as two series, and each service's last hour, with a 5-minute / 1-hour range switch.
 - **Plugins**: temperatures, GPU, UPS / battery, check notifications, or write your own. See [docs/plugins.md](docs/plugins.md).
 - **Catalog**: 30 recommended services across media, photos, passwords, ad blocking, automation, smart home, AI, file sync, notes, development, monitoring, downloads and reading, each with who it's for, how to install it, and what to watch out for behind a reverse proxy. See [catalog/services.yaml](catalog/services.yaml).

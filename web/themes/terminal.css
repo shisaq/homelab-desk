@@ -59,11 +59,13 @@ h2::before { content: "##"; color: var(--faint); }
 :root[data-scheme="light"] .icon i { background: color-mix(in srgb, var(--c) 75%, #000); }
 :root[data-scheme="light"] .icon.letter b { color: color-mix(in srgb, var(--c) 75%, #000); }
 .tile-value { font-size: 22px; letter-spacing: 0; }
+.metric-value { font-size: 15px; letter-spacing: 0; }
 .clock { letter-spacing: 0; }
-.card:hover { transform: none; border-color: var(--accent); }
-.card.up .dot { animation: none; border-radius: 0; }
+.svc:hover { background: transparent; outline: 1px solid var(--accent); outline-offset: -1px; }
+.chip { border-radius: 0; }
+.chip .icon { border-radius: 0; }
 .dot, .swatch, .legend-item i { border-radius: 0; }
-.gauge.bar, .gauge.bar > span, .stack, .tick, .core, .core i, .range, .range button, .scheme { border-radius: 0; }
+.gauge.bar, .gauge.bar > span, .stack, .tick, .core, .core i, .range, .range button, .scheme, .more, .close, .copy, .svc { border-radius: 0; }
 .scheme { border-radius: 0; }
 .ticks { gap: 1px; }
 @media (prefers-reduced-motion: reduce) { .logo i { animation: none; } }

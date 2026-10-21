@@ -75,28 +75,50 @@ function renderServices() {
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g).push(s);
   }
-  const box = $('#groups');
-  box.replaceChildren();
+  panels = [];
   let n = 0;
   for (const [name, list] of groups) {
-    const grid = h('div', { class: 'grid' });
-    for (const s of list) {
+    const rows = list.map(s => {
       n++;
-      const status = h('span', { class: 'status' }, h('span', { class: 'ms' }), h('span', { class: 'state' }, '检测中'), h('span', { class: 'dot' }));
-      const card = h('a', { class: 'card', href: s.href, style: `--c:${s.color}`, 'data-key': n <= 9 ? n : null },
+      const row = h('a', { class: 'svc', href: s.href, style: `--c:${s.color}`, 'data-key': n <= 9 ? n : null },
         icon(s.icon, s.title),
-        h('div', { class: 'body' },
-          h('div', { class: 'name' }, s.title),
-          s.desc ? h('div', { class: 'desc' }, s.desc) : null,
-          h('div', { class: 'host' }, s.host)),
-        status,
-        h('div', { class: 'history' }, h('div', { class: 'ticks-slot' }), h('div', { class: 'history-cap' })));
-      cards.set(s.name, card);
-      grid.append(card);
-    }
-    box.append(h('section', {}, h('h2', {}, name), grid));
+        h('span', { class: 'svc-text' },
+          h('span', { class: 'name' }, s.title),
+          h('span', { class: 'desc' }, s.desc || s.host)),
+        h('span', { class: 'ticks-slot' }),
+        h('span', { class: 'status' }, h('span', { class: 'ms' }), h('span', { class: 'state' }), h('span', { class: 'dot' })));
+      cards.set(s.name, row);
+      return row;
+    });
+    panels.push(h('section', { class: 'panel' }, h('h2', {}, name), h('div', { class: 'rows' }, rows)));
   }
 }
+
+// 服务区按可用高度选疏密：先试最大，放不下再一档档缩小（服务少时大而好点，多时紧凑也能一屏放下）。
+// 分组面板按「瀑布流」排：列数由宽度决定，每个面板放进当前最矮的一列。
+const DENSITIES = [['l', 380], ['m', 320], ['s', 270], ['xs', 220]]; // 档位, 每列最小宽度
+let panels = [];
+function layoutColumns(minWidth) {
+  const box = $('#groups');
+  const gap = 14;
+  const n = Math.max(1, Math.floor((box.clientWidth + gap) / (minWidth + gap)));
+  const cols = Array.from({ length: Math.min(n, panels.length || 1) }, () => h('div', { class: 'col' }));
+  box.replaceChildren(...cols);
+  for (const p of panels) {
+    cols.reduce((a, b) => (b.offsetHeight < a.offsetHeight ? b : a)).append(p);
+  }
+}
+function fitServices() {
+  const box = $('#groups');
+  const mobile = matchMedia('(max-width: 700px)').matches;
+  for (const [d, w] of mobile ? [['s', 0]] : DENSITIES) {
+    box.dataset.density = d;
+    layoutColumns(mobile ? 1e6 : w);
+    if (mobile || box.scrollHeight <= box.clientHeight + 1) return;
+  }
+}
+let fitTimer = null;
+window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitServices, 100); });
 
 function renderShortcuts() {
   if (!config.shortcuts.length) return;
@@ -108,10 +130,9 @@ function renderShortcuts() {
       btn.textContent = '已复制'; btn.classList.add('done');
       setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('done'); }, 1500);
     });
-    box.append(h('div', { class: 'chip' }, icon(sc.icon, sc.title),
+    box.append(h('div', { class: 'chip', title: '不走域名，在 App 里手动填写的地址' }, icon(sc.icon, sc.title),
       h('div', { class: 'chip-text' }, h('div', { class: 'label' }, sc.title), h('code', {}, sc.value)), btn));
   }
-  $('#shortcuts-section').hidden = false;
 }
 
 function updateServices(list) {
@@ -121,17 +142,14 @@ function updateServices(list) {
     if (!card) continue;
     card.classList.remove('up', 'down', 'error');
     const ms = $('.ms', card), state = $('.state', card);
-    if (r.ticks) {
-      $('.ticks-slot', card).replaceChildren(Charts.ticks(r.ticks, `t-${r.name}`));
-      $('.history-cap', card).textContent = r.uptime == null ? '近 1 小时' : `近 1 小时 · 可用 ${r.uptime}%`;
-    }
+    if (r.ticks) $('.ticks-slot', card).replaceChildren(Charts.ticks(r.ticks, `t-${r.name}`));
     if (r.state === 'unknown') { state.textContent = '检测中'; ms.textContent = ''; continue; }
     known++;
     card.classList.add(r.state);
     if (r.state === 'up') {
       up++;
       ms.textContent = `${r.ms} ms`;
-      state.textContent = '在线';
+      state.textContent = '';
     } else if (r.state === 'error') {
       ms.textContent = `HTTP ${r.code}`;
       state.textContent = '异常';
@@ -140,7 +158,9 @@ function updateServices(list) {
       state.textContent = '离线';
     }
     const since = `自 ${new Date(r.since * 1000).toLocaleString('zh-CN', { hour12: false })}`;
-    card.title = `${state.textContent}${r.error ? '：' + r.error : ''}（${since}）`;
+    const label = { up: '在线', error: '异常', down: '离线' }[r.state];
+    const avail = r.uptime == null ? '' : ` · 近 1 小时可用 ${r.uptime}%`;
+    card.title = `${label}${r.error ? '：' + r.error : ''}（${since}${avail}）\n${card.getAttribute('href')}`;
   }
   const total = config.services.length;
   const s = $('#summary');
@@ -198,10 +218,72 @@ let last = null;
 
 function render(st) {
   last = st;
+  if (!st.system || st.system.cpu == null) return;
+  renderStrip(st);
+  if (!$('#detail').hidden) renderDetail(st);
+  Charts.restoreHover();
+}
+
+// 指标条：一项一个小格，数字 + 迷你图
+function metric(o) {
+  return h('div', { class: `metric${o.level && o.level !== 'ok' ? ' ' + o.level : ''}` },
+    h('div', { class: 'metric-head' }, h('span', { class: 'metric-label' }, o.label),
+      o.level && o.level !== 'ok' ? badge(o.level, LEVEL_TEXT[o.level]) : null),
+    h('div', { class: 'metric-value' }, o.value),
+    o.sub ? h('div', { class: 'metric-sub' }, o.sub) : null,
+    o.viz ? h('div', { class: 'metric-viz' }, o.viz) : null);
+}
+
+function renderStrip(st) {
+  const sys = st.system, host = st.host, kinds = chartKinds();
+  const time = t => clockOf(t, st.range !== '1h');
+  const pts = key => st.history.map(p => ({ t: p.t, v: p[key] }));
+  const diskPct = (sys.disk_used / sys.disk_total) * 100;
+  const diskLevel = diskPct >= 95 ? 'crit' : diskPct >= 85 ? 'warn' : 'ok';
+  const miniGauge = (v, max, level) => Charts.gauge(v, max, { kind: kinds.gauge, level, cells: 12, center: '' });
+  const metrics = [
+    metric({ label: host.model, value: host.hostname, sub: `已运行 ${duration(sys.uptime)}` }),
+    metric({
+      label: 'CPU', level: sys.cpu >= 90 ? 'warn' : 'ok', value: pct(sys.cpu),
+      viz: Charts.trend([{ label: 'CPU', color: 'var(--s1)', points: pts('cpu') }], { key: 'm-cpu', kind: kinds.trend, mini: true, floor: 10, fmt: pct, time }),
+    }),
+    metric({
+      label: '内存', level: sys.mem_pressure, value: bytes(sys.mem_used),
+      sub: `共 ${bytes(sys.mem_total, 0)} · 压力${PRESSURE_TEXT[sys.mem_pressure]}`,
+      viz: Charts.stack((sys.mem_parts || []).map((p, i) => ({ ...p, color: SERIES[i % 4] })), sys.mem_total, bytes, 'm-mem', false),
+    }),
+    metric({
+      label: '网络', value: h('span', { class: 'net-values' }, `↓ ${rate(sys.net_rx)}`),
+      sub: `↑ ${rate(sys.net_tx)}`,
+      viz: Charts.trend([{ label: '下载', color: 'var(--s1)', points: pts('rx') }, { label: '上传', color: 'var(--s2)', points: pts('tx') }],
+        { key: 'm-net', kind: kinds.trend, mini: true, mirror: true, floor: 1024, fmt: rate, time }),
+    }),
+    metric({
+      label: '磁盘', level: diskLevel, value: `${bytes(sys.disk_total - sys.disk_used, 0)} 可用`,
+      sub: `已用 ${diskPct.toFixed(0)}%`, viz: miniGauge(diskPct, 100, diskLevel),
+    }),
+    ...st.plugins.map(p => {
+      if (p.error) return metric({ label: p.title, value: '—', sub: p.error, level: 'warn' });
+      const [first, ...rest] = p.items;
+      if (!first) return metric({ label: p.title, value: '—' });
+      const order = ['ok', 'warn', 'crit'];
+      const worst = p.items.reduce((w, it) => (order.indexOf(it.level) > order.indexOf(w) ? it.level : w), 'ok');
+      const fmt = it => `${it.value ?? '–'}${it.unit && it.unit !== '%' ? ' ' : ''}${it.unit || ''}`;
+      return metric({
+        label: p.title, level: worst,
+        value: h('span', {}, h('small', {}, `${first.label} `), fmt(first)),
+        sub: rest.map(it => `${it.label} ${fmt(it)}`).join(' · '),
+        viz: typeof first.max === 'number' && typeof first.value === 'number' ? miniGauge(first.value, first.max, first.level) : null,
+      });
+    }),
+  ];
+  $('#metrics').replaceChildren(...metrics);
+  if ($('#strip').hidden) { $('#strip').hidden = false; fitServices(); }
+}
+
+function renderDetail(st) {
   const sys = st.system, host = st.host;
-  if (!sys || sys.cpu == null) return;
   const kinds = chartKinds();
-  $('#machine').hidden = false;
   $('#machine-title').textContent = `${host.model} · ${host.hostname}`;
   $('#hostline').textContent = `${host.cpu} · ${host.cores} 核 · ${host.os} · 已运行 ${duration(sys.uptime)}`;
 
@@ -250,8 +332,17 @@ function render(st) {
     ...st.plugins.map(p => pluginTile(p, kinds)),
   ];
   $('#tiles').replaceChildren(...tiles);
-  Charts.restoreHover();
 }
+
+function openDetail(open) {
+  $('#detail').hidden = !open;
+  document.body.classList.toggle('detail-open', open);
+  if (open && last) renderDetail(last);
+  if (open) $('#close').focus();
+}
+$('#more').addEventListener('click', () => openDetail(true));
+$('#close').addEventListener('click', () => openDetail(false));
+$('#detail').addEventListener('click', e => { if (e.target.id === 'detail') openDetail(false); });
 
 // ── 刷新 ──
 let failures = 0;
@@ -300,18 +391,22 @@ async function main() {
   document.title = config.title;
   $('#title').textContent = config.title;
   $('#subtitle').textContent = config.subtitle;
-  $('#footer').append(`状态每 ${REFRESH_MS / 1000} 秒刷新 · 按 `, h('kbd', {}, '1'), '–', h('kbd', {}, '9'), ` 快速打开 · homelab-desk ${config.version}`);
+  $('#footer').append('按 ', h('kbd', {}, '1'), '–', h('kbd', {}, '9'), ' 打开服务 · ', h('kbd', {}, 'D'), ` 详细指标 · homelab-desk ${config.version}`);
   renderServices();
   renderShortcuts();
+  fitServices();
   refresh();
   setInterval(refresh, REFRESH_MS);
+  if (query.has('detail')) openDetail(true);
   document.addEventListener('visibilitychange', refresh);
 }
 
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(e.target.tagName)) return;
-  const card = document.querySelector(`.card[data-key="${e.key}"]`);
-  if (card) location.href = card.href;
+  if (e.key === 'Escape') return openDetail(false);
+  if (e.key === 'd' || e.key === 'D') return openDetail($('#detail').hidden);
+  const row = document.querySelector(`.svc[data-key="${e.key}"]`);
+  if (row && $('#detail').hidden) location.href = row.href;
 });
 
 main();

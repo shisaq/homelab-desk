@@ -48,8 +48,7 @@
   --tip-bg: #14161f;
   --tip-fg: #f2f3f7;
 }
-.card:hover { box-shadow: var(--shadow), 0 14px 40px -18px color-mix(in srgb, var(--c) 70%, transparent); }
-.card:hover .host { color: color-mix(in srgb, var(--c) 80%, var(--text)); }
+.svc:hover { background: color-mix(in srgb, var(--c) 12%, transparent); }
 .icon:not(.color) {
   background: linear-gradient(145deg, color-mix(in srgb, var(--c) 100%, #fff 18%), color-mix(in srgb, var(--c) 100%, #000 22%));
   box-shadow: 0 6px 18px -8px var(--c), 0 0 0 1px rgba(255, 255, 255, .14) inset;

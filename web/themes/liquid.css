@@ -62,22 +62,22 @@ body::before { background-attachment: fixed; }
 h1 { font-weight: 700; letter-spacing: -0.025em; }
 h2 { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--muted); }
 h2::after { display: none; }
-.tile, .card, .chip, .scheme, .range { border-color: var(--line); }
+.tile, .panel, .metric, .chip, .scheme, .range, .more, .close { border-color: var(--line); }
 /* 玻璃边缘的高光：一圈很淡的亮边，上沿更亮 */
-.tile, .card, .chip { position: relative; isolation: isolate; }
+.tile, .panel, .metric, .chip { position: relative; isolation: isolate; }
 /* 放在内容下面（z-index:-1），只和卡片底色混合，不盖住文字和状态点 */
-.tile::after, .card::after, .chip::after {
+.tile::after, .panel::after, .metric::after, .chip::after {
   content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
   background: linear-gradient(160deg, rgba(255, 255, 255, .28), transparent 30%, transparent 70%, rgba(255, 255, 255, .08));
   mix-blend-mode: overlay;
 }
-.card:hover { transform: scale(1.015); border-color: var(--line); }
+.svc:hover { background: rgba(255, 255, 255, .14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2); }
 .icon:not(.color) {
-  border-radius: 14px;
+  border-radius: 10px;
   background: linear-gradient(170deg, color-mix(in srgb, var(--c) 100%, #fff 22%), color-mix(in srgb, var(--c) 100%, #000 18%));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 8px 18px -8px var(--c);
 }
-.icon.color { border-radius: 14px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 6px 16px -8px rgba(0, 0, 0, .3); }
+.icon.color { border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 6px 16px -8px rgba(0, 0, 0, .3); }
 .range button[aria-pressed="true"] { background: var(--card-hover); color: var(--text); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 8px -2px rgba(0, 0, 0, .3); }
 .ring-track, .ring-fill { stroke-width: 9; }
 .gauge.bar { height: 8px; border-radius: 4px; }
