@@ -1,0 +1,56 @@
+/* 玻璃：半透明卡片 + 彩色光晕。图表：平滑面积曲线、细进度条 */
+:root {
+  --trend: area;
+  --gauge: bar;
+  --blur: blur(20px) saturate(140%);
+  --logo-bg: linear-gradient(135deg, #7b8cff, #5b6cff 45%, #8e5bff);
+  --logo-shadow: 0 8px 24px -8px rgba(91, 108, 255, .7), 0 0 0 1px rgba(255, 255, 255, .12) inset;
+}
+:root[data-scheme="dark"] {
+  --bg: #0b0d12;
+  --bg-art:
+    radial-gradient(900px 520px at 12% -8%, rgba(91, 108, 255, .22), transparent 60%),
+    radial-gradient(700px 480px at 92% 8%, rgba(234, 75, 113, .14), transparent 60%),
+    radial-gradient(800px 600px at 50% 110%, rgba(24, 188, 242, .12), transparent 60%);
+  --card: rgba(255, 255, 255, .045);
+  --card-solid: #15171c;
+  --card-hover: rgba(255, 255, 255, .075);
+  --line: rgba(255, 255, 255, .08);
+  --text: #f2f3f7;
+  --muted: #8b90a0;
+  --faint: #5d6272;
+  --accent: #7b8cff;
+  --ok: #3ddc84;
+  --warn: #fab219;
+  --crit: #ff5c6c;
+  --shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 10px 30px -12px rgba(0, 0, 0, .6);
+  --tip-bg: #f2f3f7;
+  --tip-fg: #14161f;
+}
+:root[data-scheme="light"] {
+  --bg: #f4f5f9;
+  --bg-art:
+    radial-gradient(900px 520px at 12% -8%, rgba(91, 108, 255, .16), transparent 60%),
+    radial-gradient(700px 480px at 92% 8%, rgba(234, 75, 113, .10), transparent 60%),
+    radial-gradient(800px 600px at 50% 110%, rgba(24, 188, 242, .10), transparent 60%);
+  --card: rgba(255, 255, 255, .72);
+  --card-solid: #fbfbfd;
+  --card-hover: #fff;
+  --line: rgba(20, 24, 40, .08);
+  --text: #14161f;
+  --muted: #646a7a;
+  --faint: #9aa0ae;
+  --accent: #5b6cff;
+  --ok: #1fa65a;
+  --warn: #c98400;
+  --crit: #e03547;
+  --shadow: 0 1px 2px rgba(20, 24, 40, .04), 0 12px 32px -16px rgba(20, 24, 40, .18);
+  --tip-bg: #14161f;
+  --tip-fg: #f2f3f7;
+}
+.card:hover { box-shadow: var(--shadow), 0 14px 40px -18px color-mix(in srgb, var(--c) 70%, transparent); }
+.card:hover .host { color: color-mix(in srgb, var(--c) 80%, var(--text)); }
+.icon:not(.color) {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--c) 100%, #fff 18%), color-mix(in srgb, var(--c) 100%, #000 22%));
+  box-shadow: 0 6px 18px -8px var(--c), 0 0 0 1px rgba(255, 255, 255, .14) inset;
+}

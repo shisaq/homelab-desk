@@ -1,0 +1,86 @@
+/* 液态玻璃：仿 Apple 新设计语言——鲜艳的壁纸上浮着高透、强模糊的玻璃，
+   边缘有一道高光，圆角更大，数字用圆体。图表：平滑面积曲线、圆环（像 Apple Watch 的活动圆环） */
+:root {
+  --trend: area;
+  --gauge: ring;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  --num-font: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  --radius: 28px;
+  --radius-sm: 14px;
+  --blur: blur(32px) saturate(190%);
+  --logo-fg: #fff;
+}
+:root[data-scheme="dark"] {
+  --bg: #0a0b14;
+  --bg-art:
+    radial-gradient(60% 55% at 10% 0%, #3b2dbb 0%, transparent 70%),
+    radial-gradient(50% 50% at 95% 15%, #b8327a 0%, transparent 70%),
+    radial-gradient(55% 60% at 70% 100%, #0f6fb3 0%, transparent 70%),
+    radial-gradient(45% 45% at 0% 90%, #c4621c 0%, transparent 70%),
+    #0a0b14;
+  --card: rgba(30, 30, 40, .38);
+  --card-solid: #1d1d24;
+  --card-hover: rgba(40, 40, 52, .48);
+  --line: rgba(255, 255, 255, .14);
+  --text: #ffffff;
+  --muted: rgba(235, 235, 245, .62);
+  --faint: rgba(235, 235, 245, .38);
+  --accent: #0a84ff;
+  --ok: #30d158;
+  --warn: #ff9f0a;
+  --crit: #ff453a;
+  --shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -1px 0 rgba(255, 255, 255, .04), 0 20px 50px -20px rgba(0, 0, 0, .7);
+  --logo-bg: linear-gradient(160deg, rgba(255, 255, 255, .35), rgba(255, 255, 255, .08));
+  --tip-bg: rgba(255, 255, 255, .9);
+  --tip-fg: #000;
+}
+:root[data-scheme="light"] {
+  --bg: #eef1f8;
+  --bg-art:
+    radial-gradient(60% 55% at 10% 0%, #a9b8ff 0%, transparent 70%),
+    radial-gradient(50% 50% at 95% 15%, #ffb3d1 0%, transparent 70%),
+    radial-gradient(55% 60% at 70% 100%, #9fdcff 0%, transparent 70%),
+    radial-gradient(45% 45% at 0% 90%, #ffd6a8 0%, transparent 70%),
+    #eef1f8;
+  --card: rgba(255, 255, 255, .5);
+  --card-solid: #f7f7fa;
+  --card-hover: rgba(255, 255, 255, .68);
+  --line: rgba(255, 255, 255, .7);
+  --text: #000000;
+  --muted: rgba(60, 60, 67, .66);
+  --faint: rgba(60, 60, 67, .42);
+  --accent: #007aff;
+  --ok: #248a3d;
+  --warn: #c93400;
+  --crit: #d70015;
+  --shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 1px 2px rgba(0, 0, 0, .04), 0 18px 44px -22px rgba(30, 40, 90, .35);
+  --logo-bg: linear-gradient(160deg, #5ac8fa, #007aff);
+  --tip-bg: rgba(0, 0, 0, .82);
+  --tip-fg: #fff;
+}
+body::before { background-attachment: fixed; }
+h1 { font-weight: 700; letter-spacing: -0.025em; }
+h2 { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--muted); }
+h2::after { display: none; }
+.tile, .card, .chip, .scheme, .range { border-color: var(--line); }
+/* 玻璃边缘的高光：一圈很淡的亮边，上沿更亮 */
+.tile, .card, .chip { position: relative; isolation: isolate; }
+/* 放在内容下面（z-index:-1），只和卡片底色混合，不盖住文字和状态点 */
+.tile::after, .card::after, .chip::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .28), transparent 30%, transparent 70%, rgba(255, 255, 255, .08));
+  mix-blend-mode: overlay;
+}
+.card:hover { transform: scale(1.015); border-color: var(--line); }
+.icon:not(.color) {
+  border-radius: 14px;
+  background: linear-gradient(170deg, color-mix(in srgb, var(--c) 100%, #fff 22%), color-mix(in srgb, var(--c) 100%, #000 18%));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 8px 18px -8px var(--c);
+}
+.icon.color { border-radius: 14px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 6px 16px -8px rgba(0, 0, 0, .3); }
+.range button[aria-pressed="true"] { background: var(--card-hover); color: var(--text); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 8px -2px rgba(0, 0, 0, .3); }
+.ring-track, .ring-fill { stroke-width: 9; }
+.gauge.bar { height: 8px; border-radius: 4px; }
+.stack { height: 14px; border-radius: 7px; }
+.tick { border-radius: 3px; }
+.tooltip { -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-radius: 10px; }

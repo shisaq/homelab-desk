@@ -1,0 +1,58 @@
+/* 简洁：白卡片 + 细边框，没有光晕和模糊。图表：柱状、细进度条 */
+:root {
+  --trend: bars;
+  --gauge: bar;
+  --radius: 14px;
+  --radius-sm: 9px;
+}
+:root[data-scheme="light"] {
+  --bg: #f7f7f5;
+  --card: #fff;
+  --card-solid: #fff;
+  --card-hover: #fff;
+  --line: #e6e4df;
+  --text: #1f1f1d;
+  --muted: #6b6a66;
+  --faint: #a3a19b;
+  --accent: #2f6fde;
+  --ok: #1e8e4a;
+  --warn: #b97800;
+  --crit: #d03b3b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  --logo-bg: #1f1f1d;
+  --icon-color-bg: #f2f1ee;
+  --chip-icon: #6b6a66;
+  --tip-bg: #1f1f1d;
+  --tip-fg: #fff;
+}
+:root[data-scheme="dark"] {
+  --bg: #161615;
+  --card: #1e1e1c;
+  --card-solid: #1e1e1c;
+  --card-hover: #242422;
+  --line: #2e2e2b;
+  --text: #ecebe8;
+  --muted: #9b9a95;
+  --faint: #6a6964;
+  --accent: #6b9cff;
+  --ok: #3fbf6f;
+  --warn: #e5a52a;
+  --crit: #f06464;
+  --shadow: none;
+  --logo-bg: #ecebe8;
+  --logo-fg: #161615;
+  --on-accent: #161615;
+  --icon-color-bg: #2a2a27;
+  --chip-icon: #9b9a95;
+  --tip-bg: #ecebe8;
+  --tip-fg: #161615;
+}
+.icon:not(.color) { background: color-mix(in srgb, var(--c) 12%, var(--card)); }
+.icon i { background: var(--c); }
+.icon.letter b { color: var(--c); }
+:root[data-scheme="dark"] .icon:not(.color) { background: color-mix(in srgb, var(--c) 22%, var(--card)); }
+:root[data-scheme="dark"] .icon i { background: color-mix(in srgb, var(--c) 70%, #fff); }
+:root[data-scheme="dark"] .icon.letter b { color: color-mix(in srgb, var(--c) 70%, #fff); }
+.card:hover { transform: none; }
+h1 { font-weight: 650; }
+.range button[aria-pressed="true"] { background: var(--text); color: var(--bg); }

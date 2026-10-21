@@ -1,0 +1,498 @@
+# 推荐服务目录。homelab-desk catalog 查看；homelab-desk add <名字> 直接按这里的默认值加入。
+#
+# 每项：
+#   name      建议的名字（也是子域名）
+#   port      默认端口；add 时不写地址就用 127.0.0.1:<port>
+#   health    在线检测路径
+#   for       适合谁
+#   install   怎么装（macOS / Linux）；只列官方推荐的方式，细节以项目文档为准
+#   notes     放到反向代理后面要注意的事
+#   native    能否在 macOS 上原生运行（false = 需要 Docker，Mac 上建议 OrbStack）
+#   license   项目许可证（2026-10-21 按各仓库 LICENSE 核实）
+# 端口互相冲突时（如好几个默认 8080），装的时候换一个，add 时写实际端口即可。
+
+categories:
+  - name: 影音
+    services:
+      - name: jellyfin
+        title: Jellyfin
+        desc: 电影、剧集、音乐的私人影音库，手机电视都有客户端
+        for: 有一堆电影剧集、想在任何设备上像 Netflix 一样看的人
+        port: 8096
+        health: /health
+        icon: jellyfin
+        color: "#00A4DC"
+        native: true
+        install:
+          macos: brew install --cask jellyfin
+          linux: curl https://repo.jellyfin.org/install-debuntu.sh | sudo bash
+        notes: Mac 上原生运行才能用 VideoToolbox 硬件转码（Docker 里用不了）。
+        url: https://jellyfin.org
+        license: GPL-2.0
+
+      - name: plex
+        title: Plex
+        desc: 老牌影音库，客户端最全，部分功能收费
+        for: 家里人用电视、游戏机看片，不想折腾客户端的人
+        port: 32400
+        health: /identity
+        path: /web
+        icon: plex
+        color: "#EBAF00"
+        native: true
+        install:
+          macos: brew install --cask plex-media-server
+          linux: 从 plex.tv/media-server-downloads 下载对应发行版的包
+        notes: 闭源；账号登录走 Plex 官方服务器。
+        url: https://www.plex.tv
+        license: 专有
+
+      - name: navidrome
+        title: Navidrome
+        desc: 私人音乐流媒体，兼容 Subsonic 客户端
+        for: 有本地无损音乐库的人
+        port: 4533
+        health: /ping
+        icon: navidrome
+        native: true
+        install:
+          macos: brew install navidrome
+          linux: 从 GitHub Releases 下载二进制，或用 Docker
+        url: https://www.navidrome.org
+        license: GPL-3.0
+
+      - name: audiobookshelf
+        title: Audiobookshelf
+        desc: 有声书和播客库，记住每本书听到哪
+        for: 听有声书、播客的人
+        port: 13378
+        health: /
+        icon: audiobookshelf
+        native: false
+        install:
+          macos: 用 Docker：docker run -d -p 13378:80 ghcr.io/advplyr/audiobookshelf
+          linux: 同上，或官方 apt 源
+        url: https://www.audiobookshelf.org
+        license: GPL-3.0
+
+  - name: 相册
+    services:
+      - name: immich
+        title: Immich
+        desc: 手机照片自动备份 + 人脸、地点、以图搜图，体验接近 Google 相册
+        for: 想把手机照片从 iCloud / Google 相册搬回家的人
+        port: 2283
+        health: /api/server/ping
+        icon: immich
+        color: "#4250AF"
+        native: false
+        install:
+          macos: 用 Docker Compose（官方文档 Quick start），Mac 上建议 OrbStack
+          linux: 同上
+        notes: 手机 App 里服务器地址填 https://immich.<你的域名>；大视频上传没问题（Caddy 不限请求体大小）。
+        url: https://immich.app
+        license: AGPL-3.0
+
+      - name: photoprism
+        title: PhotoPrism
+        desc: 照片库浏览与 AI 分类，适合整理已有的照片目录
+        for: 已经有大量照片文件、想要一个好看的浏览界面的人
+        port: 2342
+        health: /api/v1/status
+        icon: photoprism
+        native: false
+        install:
+          macos: 用 Docker Compose（官方文档），Mac 上建议 OrbStack
+          linux: 同上
+        notes: 设置 PHOTOPRISM_SITE_URL=https://photoprism.<你的域名>/
+        url: https://www.photoprism.app
+        license: AGPL-3.0
+
+  - name: 密码
+    services:
+      - name: vault
+        title: Vaultwarden
+        desc: 兼容 Bitwarden 的密码管理服务端，所有 Bitwarden 客户端都能连
+        for: 想自己保管密码库的人
+        port: 8000
+        health: /alive
+        icon: vaultwarden
+        color: "#175DDC"
+        native: true
+        install:
+          macos: brew install vaultwarden（网页端另装 web-vault，见 brew info vaultwarden）
+          linux: docker run -d -p 8000:80 -v vw-data:/data vaultwarden/server
+        notes: 必须 HTTPS（本项目已提供）。设 DOMAIN=https://vault.<你的域名>；建好自己的账号后设 SIGNUPS_ALLOWED=false。密码库务必另做备份。
+        url: https://github.com/dani-garcia/vaultwarden
+        license: AGPL-3.0
+
+  - name: 广告过滤
+    services:
+      - name: adguard
+        title: AdGuard Home
+        desc: 全家设备的 DNS 广告与追踪过滤，带统计面板
+        for: 想让手机、电视、平板都少看广告的人
+        port: 3000
+        health: /
+        icon: adguard
+        color: "#68BC71"
+        native: true
+        install:
+          macos: 官方脚本 curl -s -S -L https://raw.githubusercontent.com/AdguardTeam/AdGuardHome/master/scripts/install.sh | sh -s -- -v
+          linux: 同上
+        notes: 初始化时网页端口不要选 80（被 Caddy 占用），选 3000。想让不在家的设备也过滤：Tailscale 后台 DNS 里把本机 Tailscale 地址设为全局 nameserver。DNS 监听 53 端口需要以 root 运行（安装脚本会处理）。
+        url: https://adguard.com/adguard-home/overview.html
+        license: GPL-3.0
+
+      - name: pihole
+        title: Pi-hole
+        desc: 老牌 DNS 广告过滤，社区规则丰富
+        for: 用 Linux / 树莓派做家里 DNS 的人
+        port: 8081
+        health: /admin/
+        path: /admin/
+        icon: pihole
+        color: "#96060C"
+        native: false
+        install:
+          linux: curl -sSL https://install.pi-hole.net | bash
+        notes: 只支持 Linux。网页端口默认 80，会和 Caddy 冲突：在 /etc/pihole/pihole.toml 里把 webserver.port 改成 8081。
+        url: https://pi-hole.net
+        license: EUPL-1.2
+
+  - name: 自动化
+    services:
+      - name: n8n
+        title: n8n
+        desc: 可视化工作流自动化，可接几百种服务和 AI
+        for: 想把重复操作串成自动流程的人
+        port: 5678
+        health: /healthz
+        icon: n8n
+        color: "#EA4B71"
+        native: true
+        install:
+          macos: npm install -g n8n（需要 Node.js），或 Docker
+          linux: docker run -d -p 5678:5678 -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n
+        notes: 设 WEBHOOK_URL=https://n8n.<你的域名>/ 和 N8N_PROXY_HOPS=1，否则界面里显示的 Webhook 地址不对。
+        url: https://n8n.io
+        license: Sustainable Use License（源码可见，非 OSI 开源）
+
+      - name: nodered
+        title: Node-RED
+        desc: 拖拽式流程编排，物联网和智能家居常用
+        for: 喜欢连线式编程、玩传感器的人
+        port: 1880
+        health: /
+        icon: nodered
+        color: "#8F0000"
+        native: true
+        install:
+          macos: npm install -g --unsafe-perm node-red
+          linux: 官方脚本 bash <(curl -sL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb)
+        notes: 默认没有登录，务必在 settings.js 里开 adminAuth。
+        url: https://nodered.org
+        license: Apache-2.0
+
+  - name: 智能家居
+    services:
+      - name: ha
+        title: Home Assistant
+        desc: 智能家居中枢，几乎所有品牌的设备都能接
+        for: 家里有多个品牌的智能设备、想统一控制和自动化的人
+        port: 8123
+        health: /manifest.json
+        icon: homeassistant
+        color: "#18BCF2"
+        native: false
+        install:
+          macos: 推荐装在树莓派 / 小主机上（Home Assistant OS）；Mac 上可用虚拟机
+          linux: Home Assistant OS，或 Docker（官方文档）
+        notes: 放到反向代理后会返回 400，必须在 configuration.yaml 里加 http 段：use_x_forwarded_for 为 true，trusted_proxies 写 Caddy 所在机器的局域网 IP（同机就写 127.0.0.1）；改完要「完整重启」，快速重载不生效。
+        url: https://www.home-assistant.io
+        license: Apache-2.0
+
+      - name: homebridge
+        title: Homebridge
+        desc: 把不支持 HomeKit 的设备接进 Apple 家庭
+        for: 用 iPhone「家庭」App 控制家里设备的人
+        port: 8581
+        health: /
+        icon: homebridge
+        color: "#491F59"
+        native: true
+        install:
+          macos: sudo npm install -g --unsafe-perm homebridge homebridge-config-ui-x && sudo hb-service install
+          linux: 官方 apt 源（homebridge.io）
+        url: https://homebridge.io
+        license: Apache-2.0
+
+  - name: AI
+    services:
+      - name: ollama
+        title: Ollama
+        desc: 一条命令跑本地大模型，提供兼容 OpenAI 的接口
+        for: 想在自己机器上跑开源模型的人；Apple 芯片 Mac 很合适
+        port: 11434
+        health: /api/version
+        icon: ollama
+        native: true
+        rewrite_host: true
+        install:
+          macos: brew install ollama，或官网下载 App
+          linux: curl -fsSL https://ollama.com/install.sh | sh
+        notes: 必须原生运行才能用 Mac 的 GPU（Metal）。Ollama 只认 localhost 的 Host 头，已默认开启 rewrite_host。接口本身没有鉴权，别加到 allow_extra 里对外开放。
+        url: https://ollama.com
+        license: MIT
+
+      - name: chat
+        title: Open WebUI
+        desc: 类 ChatGPT 的聊天界面，可接 Ollama 和各家 API
+        for: 想给家人一个统一 AI 聊天入口的人
+        port: 8080
+        health: /health
+        icon: open-webui
+        native: true
+        install:
+          macos: pip install open-webui && open-webui serve（需要 Python 3.11），或 Docker
+          linux: docker run -d -p 8080:8080 -v open-webui:/app/backend/data ghcr.io/open-webui/open-webui:main
+        notes: 第一个注册的账号是管理员，建完后在设置里关闭注册。
+        url: https://openwebui.com
+        license: Open WebUI License（BSD-3 加品牌条款）
+
+      - name: lmstudio
+        title: LM Studio
+        desc: 图形界面跑本地模型，自带兼容 OpenAI 的服务
+        for: 不想敲命令、想点点鼠标试模型的人
+        port: 1234
+        health: /v1/models
+        native: true
+        install:
+          macos: 官网下载 App，在 Developer 里启动 Server
+        notes: 闭源免费软件。
+        url: https://lmstudio.ai
+        license: 专有
+
+  - name: 文件与同步
+    services:
+      - name: sync
+        title: Syncthing
+        desc: 多台设备之间点对点同步文件夹，不经第三方服务器
+        for: 想让电脑之间、手机和电脑之间自动同步文件的人
+        port: 8384
+        health: /rest/noauth/health
+        icon: syncthing
+        color: "#0891D1"
+        native: true
+        rewrite_host: true
+        install:
+          macos: brew install syncthing && brew services start syncthing
+          linux: sudo apt install syncthing（或官方 apt 源）
+        notes: Syncthing 网页界面会检查 Host，已默认开启 rewrite_host。网页界面务必设密码。
+        url: https://syncthing.net
+        license: MPL-2.0
+
+      - name: files
+        title: File Browser
+        desc: 网页版文件管理器，上传下载分享
+        for: 想在手机上随手取家里电脑文件的人
+        port: 8085
+        health: /
+        icon: filebrowser
+        native: true
+        install:
+          macos: brew install filebrowser，然后 filebrowser -a 127.0.0.1 -p 8085 -r <要共享的目录>
+          linux: curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash
+        notes: 首次启动会打印管理员初始密码，登录后马上改。
+        url: https://filebrowser.org
+        license: Apache-2.0
+
+      - name: cloud
+        title: Nextcloud
+        desc: 完整的私有网盘 + 日历、联系人、在线文档
+        for: 想整体替代网盘和办公套件的家庭或小团队
+        port: 11000
+        health: /status.php
+        icon: nextcloud
+        color: "#0082C9"
+        native: false
+        install:
+          linux: Nextcloud All-in-One（Docker），按官方「反向代理」文档设 APACHE_PORT=11000
+        notes: 组件多、维护量大；只是想同步文件的话 Syncthing 更省心。
+        url: https://nextcloud.com
+        license: AGPL-3.0
+
+  - name: 笔记与文档
+    services:
+      - name: memos
+        title: Memos
+        desc: 轻量的碎片笔记，像自己的私人微博
+        for: 习惯随手记一句话的人
+        port: 5230
+        health: /
+        icon: memos
+        native: false
+        install:
+          macos: docker run -d -p 5230:5230 -v ~/.memos:/var/opt/memos neosmemo/memos:stable
+          linux: 同上
+        url: https://www.usememos.com
+        license: MIT
+
+      - name: paperless
+        title: Paperless-ngx
+        desc: 纸质文件扫描归档，自动 OCR、可全文搜索
+        for: 家里票据、合同、说明书一大堆的人
+        port: 8000
+        health: /
+        icon: paperless-ngx
+        native: false
+        install:
+          macos: 用 Docker Compose（官方 install script），Mac 上建议 OrbStack
+          linux: 同上
+        notes: 设 PAPERLESS_URL=https://paperless.<你的域名>，否则会报 CSRF 错误。端口与 Vaultwarden 默认的 8000 冲突，二选一改掉。
+        url: https://docs.paperless-ngx.com
+        license: GPL-3.0
+
+      - name: pdf
+        title: Stirling-PDF
+        desc: 本地处理 PDF：合并、拆分、转换、OCR、签名
+        for: 不想把文件传到在线 PDF 网站的人
+        port: 8090
+        health: /
+        icon: stirling-pdf
+        native: false
+        install:
+          macos: docker run -d -p 8090:8080 docker.stirlingpdf.com/stirlingtools/stirling-pdf
+          linux: 同上
+        url: https://www.stirlingpdf.com
+        license: MIT（部分高级功能另有授权）
+
+  - name: 开发
+    services:
+      - name: git
+        title: Gitea
+        desc: 轻量的自托管 Git 服务，界面类似 GitHub
+        for: 想把私人代码仓库放在家里的人
+        port: 3000
+        health: /api/healthz
+        icon: gitea
+        color: "#609926"
+        native: true
+        install:
+          macos: brew install gitea
+          linux: 官方二进制或 Docker
+        notes: app.ini 里设 ROOT_URL = https://git.<你的域名>/。社区分支 Forgejo 用法相同。端口与 AdGuard Home 的 3000 冲突时改一个。
+        url: https://about.gitea.com
+        license: MIT
+
+      - name: code
+        title: code-server
+        desc: 浏览器里的 VS Code，平板上也能写代码
+        for: 想在 iPad 或别的电脑上接着写代码的人
+        port: 8800
+        health: /healthz
+        icon: coder
+        native: true
+        install:
+          macos: brew install code-server，在 ~/.config/code-server/config.yaml 设 bind-addr 127.0.0.1:8800
+          linux: curl -fsSL https://code-server.dev/install.sh | sh
+        notes: 自带密码登录，密码在 ~/.config/code-server/config.yaml。
+        url: https://github.com/coder/code-server
+        license: MIT
+
+  - name: 监控
+    services:
+      - name: kuma
+        title: Uptime Kuma
+        desc: 网站与服务的在线监控，带历史曲线和几十种通知方式
+        for: 除了家里服务，还想盯着外网网站、证书的人
+        port: 3001
+        health: /
+        icon: uptimekuma
+        color: "#5CDD8B"
+        native: false
+        install:
+          macos: docker run -d -p 3001:3001 -v uptime-kuma:/app/data louislam/uptime-kuma:1
+          linux: 同上
+        url: https://uptime.kuma.pet
+        license: MIT
+
+      - name: beszel
+        title: Beszel
+        desc: 多台机器的资源监控与历史曲线，含 Docker 容器统计
+        for: 家里有好几台机器、想看长期趋势的人
+        port: 8090
+        health: /api/health
+        icon: beszel
+        native: true
+        install:
+          macos: 从 GitHub Releases 下载 hub 与 agent 二进制
+          linux: 官方安装脚本或 Docker
+        notes: 端口与 Stirling-PDF 示例的 8090 冲突时改一个。
+        url: https://beszel.dev
+        license: MIT
+
+  - name: 下载
+    services:
+      - name: qb
+        title: qBittorrent
+        desc: BT 下载，带网页控制台
+        for: 用 BT 下载、想在手机上加任务的人
+        port: 8080
+        health: /
+        icon: qbittorrent
+        color: "#2F67BA"
+        native: true
+        install:
+          macos: brew install --cask qbittorrent，在 设置 › Web UI 里启用
+          linux: sudo apt install qbittorrent-nox
+        notes: Web UI 设置里「主机标头验证」的域名列表加上 qb.<你的域名>，否则会被拒绝。
+        url: https://www.qbittorrent.org
+        license: GPL-2.0-or-later（官方二进制为 GPL-3.0-or-later）
+
+      - name: transmission
+        title: Transmission
+        desc: 轻量 BT 下载，资源占用小
+        for: 只想要一个简单下载器的人
+        port: 9091
+        health: /transmission/web/
+        path: /transmission/web/
+        icon: transmission
+        native: true
+        install:
+          macos: brew install transmission-cli && brew services start transmission-cli
+          linux: sudo apt install transmission-daemon
+        notes: settings.json 里的 rpc-host-whitelist 加上 transmission.<你的域名>（或关闭 rpc-host-whitelist-enabled）。
+        url: https://transmissionbt.com
+        license: GPL-2.0 或 GPL-3.0（任选）
+
+  - name: 阅读
+    services:
+      - name: rss
+        title: FreshRSS
+        desc: 自托管 RSS 阅读器，兼容主流 RSS 客户端
+        for: 用 RSS 追博客、新闻的人
+        port: 8081
+        health: /
+        icon: freshrss
+        native: false
+        install:
+          macos: docker run -d -p 8081:80 -v freshrss_data:/var/www/FreshRSS/data freshrss/freshrss
+          linux: 同上
+        notes: 安装向导里的 Base URL 填 https://rss.<你的域名>。端口与 Pi-hole 示例的 8081 冲突时改一个。
+        url: https://freshrss.org
+        license: AGPL-3.0
+
+      - name: books
+        title: Calibre-Web
+        desc: 电子书库的网页界面，可在线阅读、推送到 Kindle
+        for: 有 Calibre 书库的人
+        port: 8083
+        health: /
+        icon: calibreweb
+        native: false
+        install:
+          macos: docker run -d -p 8083:8083 -v <书库目录>:/books lscr.io/linuxserver/calibre-web
+          linux: 同上
+        url: https://github.com/janeczku/calibre-web
+        license: GPL-3.0

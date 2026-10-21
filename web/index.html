@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="{{THEME}}" data-appearance="{{APPEARANCE}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>{{TITLE}}</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="base.css">
+<script>
+  // 在样式生效前定好深浅色，避免闪烁。优先级：页面上手动选的 > 配置里的 > 跟随系统
+  (function () {
+    var root = document.documentElement, q = new URLSearchParams(location.search);
+    var theme = q.get('theme');
+    if (theme && /^[a-z]+$/.test(theme)) root.dataset.theme = theme;
+    if (!/^[a-z]+$/.test(root.dataset.theme)) root.dataset.theme = 'glass'; // 未经 deploy 直接打开时
+    var pick = q.get('appearance') || localStorage.getItem('homelab-desk.appearance') || root.dataset.appearance;
+    if (!/^(light|dark)$/.test(pick)) pick = 'auto';
+    root.dataset.appearance = pick;
+    var dark = pick === 'dark' || (pick === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.dataset.scheme = dark ? 'dark' : 'light';
+    document.write('<link rel="stylesheet" href="themes/' + root.dataset.theme + '.css" id="theme-css">');
+    // ?demo：用虚构数据展示（截图用）
+    if (q.has('demo')) document.write('<script src="demo.js"><\/script>');
+  })();
+</script>
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><i></i></div>
+      <div>
+        <h1 id="title">{{TITLE}}</h1>
+        <p class="sub" id="subtitle"></p>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="meta-row">
+        <button class="scheme" id="scheme" type="button" title="切换深浅色"></button>
+        <div class="clock" id="clock">--:--</div>
+      </div>
+      <div class="summary" id="summary"><span class="dot"></span><span>检测中…</span></div>
+    </div>
+  </header>
+
+  <section id="machine" hidden>
+    <div class="section-head">
+      <h2 id="machine-title">本机</h2>
+      <div class="range" role="group" aria-label="曲线时间范围">
+        <button type="button" data-range="5m" aria-pressed="true">5 分钟</button>
+        <button type="button" data-range="1h" aria-pressed="false">1 小时</button>
+      </div>
+    </div>
+    <p class="hostline" id="hostline"></p>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <div id="groups"></div>
+
+  <section id="shortcuts-section" hidden>
+    <h2>在 App 里填写</h2>
+    <div class="chips" id="shortcuts"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</main>
+
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+<script src="charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

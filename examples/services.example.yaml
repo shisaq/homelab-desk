@@ -1,0 +1,64 @@
+# homelab-desk 配置。改完运行 homelab-desk deploy 生效（可重复执行）。
+# 放在 ~/.config/homelab-desk/services.yaml
+
+# 工作台地址；每个服务的地址是 <名字>.desk.example.com
+domain: desk.example.com
+# 申请 HTTPS 证书（Let's Encrypt）用的邮箱，证书快到期又续不上时会收到提醒
+acme_email: you@example.com
+
+title: 我的工作台
+subtitle: 家里的服务都在这里 · 只有自己的设备能打开
+# 主题：glass（深色玻璃）/ liquid（苹果液态玻璃）/ paper（简洁）/ terminal（终端）
+theme: glass
+# 深浅色：auto（跟随系统）/ light / dark；页面右上角也能临时切换
+appearance: auto
+# 图表画法，不写就用主题自带的：
+#   trend（曲线）：area 面积 / line 折线 / bars 柱状 / blocks 字符块
+#   gauge（占比）：bar 进度条 / ring 圆环 / segments 分段格
+# charts:
+#   trend: bars
+#   gauge: ring
+
+dns:
+  provider: cloudflare
+  # Cloudflare Token：模板「Edit zone DNS」+ 加一项 Zone·Zone·Read，资源只选这个域名
+  token_file: cloudflare.token     # 相对路径相对于本文件所在目录
+
+# 每天几点体检
+check:
+  time: "08:30"
+
+# 插件：仪表盘上多几张指标卡、体检里多几项。可用的见 plugins/ 目录
+plugins:
+  - temps                          # 温度
+  - gpu                            # GPU 占用
+  - power                          # UPS / 电池；UPS 接在 NAS 上的写成下面这样
+  # - name: power
+  #   nut: ups@192.168.1.10
+  # - name: notify-command         # 把体检报告交给你自己的脚本发出去
+  #   command: ~/.config/homelab-desk/send.sh
+  #   only: warn                   # 只在有问题时发
+
+# 「在 App 里填写」：不走域名、要手动填地址的东西，点一下复制
+shortcuts: []
+#  - title: SSH · 屏幕共享
+#    value: my-mac-mini
+#    icon: tailscale
+
+# 服务。增删用 homelab-desk add / remove，也可以直接改这里。
+#   name       名字，也是子域名
+#   url        后端地址，写到端口为止
+#   health     在线检测路径（默认 /），任何 HTTP 回应都算在线
+#   title / desc / group / icon / color   卡片上的名字、说明、分组、图标、主色
+#   path       点卡片打开的路径
+#   read_timeout   长请求（如本地大模型）调大，如 30m
+#   insecure_tls   后端是自签证书的 https（如群晖 5001）时写 true
+services:
+  - name: jellyfin
+    title: Jellyfin
+    desc: 电影与剧集
+    group: 影音
+    url: http://127.0.0.1:8096
+    health: /health
+    icon: jellyfin
+    color: "#00A4DC"

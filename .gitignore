@@ -1,0 +1,6 @@
+交接-起步.md
+.local/
+.DS_Store
+__pycache__/
+*.pyc
+CLAUDE.md
