@@ -224,14 +224,39 @@ function render(st) {
   Charts.restoreHover();
 }
 
-// 指标条：一项一个小格，数字 + 迷你图
+// 指标条：CPU / 内存 / 磁盘 / GPU / 电量用整张卡片的水位表达占比。
+// 复用卡片和水位节点，刷新时只换文字，让水位能从上次的高度平滑升降。
+const metricCards = new Map();
 function metric(o) {
-  return h('div', { class: `metric${o.level && o.level !== 'ok' ? ' ' + o.level : ''}` },
+  let card = metricCards.get(o.key);
+  if (!card) {
+    card = h('div', { class: 'metric', 'data-metric': o.key }, h('div', { class: 'metric-content' }));
+    metricCards.set(o.key, card);
+  }
+  const fill = o.fill;
+  const hasFill = Number.isFinite(fill?.value) && Number.isFinite(fill?.max) && fill.max > 0;
+  const level = o.level && o.level !== 'ok' ? ` ${o.level}` : '';
+  card.className = `metric${hasFill ? ' metric-filled' : ''}${o.positive ? ' metric-positive' : ''}${level}`;
+  card.title = o.hint || '';
+  let water = card.querySelector('.metric-fill');
+  if (hasFill) {
+    if (!water) {
+      water = h('div', { class: 'metric-fill', 'aria-hidden': 'true' });
+      card.prepend(water);
+    }
+    card.style.setProperty('--fill-level', `${Math.max(0, Math.min(100, fill.value / fill.max * 100))}%`);
+  } else {
+    water?.remove();
+    card.style.removeProperty('--fill-level');
+  }
+  $('.metric-content', card).replaceChildren(...[
     h('div', { class: 'metric-head' }, h('span', { class: 'metric-label' }, o.label),
       o.level && o.level !== 'ok' ? badge(o.level, LEVEL_TEXT[o.level]) : null),
     h('div', { class: 'metric-value' }, o.value),
     o.sub ? h('div', { class: 'metric-sub' }, o.sub) : null,
-    o.viz ? h('div', { class: 'metric-viz' }, o.viz) : null);
+    o.viz ? h('div', { class: 'metric-viz' }, o.viz) : null,
+  ].filter(c => c != null));
+  return card;
 }
 
 function renderStrip(st) {
@@ -240,44 +265,59 @@ function renderStrip(st) {
   const pts = key => st.history.map(p => ({ t: p.t, v: p[key] }));
   const diskPct = (sys.disk_used / sys.disk_total) * 100;
   const diskLevel = diskPct >= 95 ? 'crit' : diskPct >= 85 ? 'warn' : 'ok';
+  const memPct = (sys.mem_used / sys.mem_total) * 100;
   const miniGauge = (v, max, level) => Charts.gauge(v, max, { kind: kinds.gauge, level, cells: 12, center: '' });
   const metrics = [
-    metric({ label: host.model, value: host.hostname, sub: `已运行 ${duration(sys.uptime)}` }),
+    metric({ key: 'host', label: host.model, value: host.hostname, sub: `已运行 ${duration(sys.uptime)}` }),
     metric({
-      label: 'CPU', level: sys.cpu >= 90 ? 'warn' : 'ok', value: pct(sys.cpu),
-      viz: Charts.trend([{ label: 'CPU', color: 'var(--s1)', points: pts('cpu') }], { key: 'm-cpu', kind: kinds.trend, mini: true, floor: 10, fmt: pct, time }),
+      key: 'cpu', label: 'CPU', level: sys.cpu >= 90 ? 'warn' : 'ok', value: pct(sys.cpu),
+      fill: { value: sys.cpu, max: 100 }, hint: `CPU 占用 ${pct(sys.cpu)}`,
     }),
     metric({
-      label: '内存', level: sys.mem_pressure, value: bytes(sys.mem_used),
+      key: 'memory', label: '内存', level: sys.mem_pressure, value: bytes(sys.mem_used),
       sub: `共 ${bytes(sys.mem_total, 0)} · 压力${PRESSURE_TEXT[sys.mem_pressure]}`,
-      viz: Charts.stack((sys.mem_parts || []).map((p, i) => ({ ...p, color: SERIES[i % 4] })), sys.mem_total, bytes, 'm-mem', false),
+      fill: { value: sys.mem_used, max: sys.mem_total },
+      hint: `已用 ${bytes(sys.mem_used)} / ${bytes(sys.mem_total, 0)}（${memPct.toFixed(1)}%）· 内存压力${PRESSURE_TEXT[sys.mem_pressure]}`,
     }),
     metric({
-      label: '网络', value: h('span', { class: 'net-values' }, `↓ ${rate(sys.net_rx)}`),
+      key: 'network', label: '网络', value: h('span', { class: 'net-values' }, `↓ ${rate(sys.net_rx)}`),
       sub: `↑ ${rate(sys.net_tx)}`,
       viz: Charts.trend([{ label: '下载', color: 'var(--s1)', points: pts('rx') }, { label: '上传', color: 'var(--s2)', points: pts('tx') }],
         { key: 'm-net', kind: kinds.trend, mini: true, mirror: true, floor: 1024, fmt: rate, time }),
     }),
     metric({
-      label: '磁盘', level: diskLevel, value: `${bytes(sys.disk_total - sys.disk_used, 0)} 可用`,
-      sub: `已用 ${diskPct.toFixed(0)}%`, viz: miniGauge(diskPct, 100, diskLevel),
+      key: 'disk', label: '磁盘', level: diskLevel, value: `${bytes(sys.disk_total - sys.disk_used, 0)} 可用`,
+      sub: `已用 ${diskPct.toFixed(0)}%`, fill: { value: sys.disk_used, max: sys.disk_total },
+      hint: `磁盘已用 ${bytes(sys.disk_used)} / ${bytes(sys.disk_total)}（${diskPct.toFixed(1)}%）`,
     }),
     ...st.plugins.map(p => {
-      if (p.error) return metric({ label: p.title, value: '—', sub: p.error, level: 'warn' });
+      const key = `plugin-${p.name}`;
+      if (p.error) return metric({ key, label: p.title, value: '—', sub: p.error, level: 'warn' });
       const [first, ...rest] = p.items;
-      if (!first) return metric({ label: p.title, value: '—' });
+      if (!first) return metric({ key, label: p.title, value: '—' });
       const order = ['ok', 'warn', 'crit'];
       const worst = p.items.reduce((w, it) => (order.indexOf(it.level) > order.indexOf(w) ? it.level : w), 'ok');
       const fmt = it => `${it.value ?? '–'}${it.unit && it.unit !== '%' ? ' ' : ''}${it.unit || ''}`;
+      const water = p.name === 'gpu' || p.name === 'power';
       return metric({
-        label: p.title, level: worst,
+        key, label: p.title, level: worst,
         value: h('span', {}, h('small', {}, `${first.label} `), fmt(first)),
         sub: rest.map(it => `${it.label} ${fmt(it)}`).join(' · '),
-        viz: typeof first.max === 'number' && typeof first.value === 'number' ? miniGauge(first.value, first.max, first.level) : null,
+        fill: water ? { value: first.value, max: first.max } : null,
+        positive: p.name === 'power',
+        hint: `${p.title}：${p.items.map(it => `${it.label} ${fmt(it)}`).join(' · ')}`,
+        viz: !water && typeof first.max === 'number' && typeof first.value === 'number' ? miniGauge(first.value, first.max, first.level) : null,
       });
     }),
   ];
-  $('#metrics').replaceChildren(...metrics);
+  // 顺序没变时保持节点连接，避免每 3 秒重新播放水位的入场动画。
+  const box = $('#metrics');
+  for (const [i, card] of metrics.entries()) {
+    if (box.children[i] !== card) box.insertBefore(card, box.children[i] || null);
+  }
+  for (const card of [...box.children]) {
+    if (!metrics.includes(card)) { metricCards.delete(card.dataset.metric); card.remove(); }
+  }
   if ($('#strip').hidden) { $('#strip').hidden = false; fitServices(); }
 }
 

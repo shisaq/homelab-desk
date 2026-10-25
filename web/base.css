@@ -84,9 +84,25 @@ h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .strip { display: flex; align-items: stretch; gap: 10px; flex: none; }
 .metrics { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
 .metric {
+  position: relative; isolation: isolate; overflow: hidden;
   min-width: 0; padding: 10px 12px; border-radius: calc(var(--radius) * .7); display: flex; flex-direction: column; gap: 1px;
   background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow);
   -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+}
+.metric-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+/* 卡片本身是容器：底部向上填色。填充只装饰占比，读数始终在上层。 */
+.metric-filled { --water-color: var(--accent); }
+.metric-positive { --water-color: var(--ok); }
+.metric-filled.warn { --water-color: var(--warn); }
+.metric-filled.crit { --water-color: var(--crit); }
+.metric-fill {
+  position: absolute; inset: auto 0 0; z-index: -1; pointer-events: none;
+  height: var(--fill-level); transition: height .65s ease;
+  background: linear-gradient(to top, color-mix(in srgb, var(--water-color) 32%, transparent), color-mix(in srgb, var(--water-color) 22%, transparent));
+  box-shadow: inset 0 1px color-mix(in srgb, var(--water-color) 65%, transparent);
+}
+:root[data-scheme="light"] .metric-fill {
+  background: linear-gradient(to top, color-mix(in srgb, var(--water-color) 20%, transparent), color-mix(in srgb, var(--water-color) 12%, transparent));
 }
 .metric-head { display: flex; align-items: center; gap: 6px; min-height: 18px; }
 .metric-label { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -320,7 +336,7 @@ footer { flex: none; display: flex; align-items: center; gap: 12px; color: var(-
 kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .gauge.bar > span, .ring-fill, .core i, .svc { transition: none; }
+  .gauge.bar > span, .ring-fill, .core i, .svc, .metric-fill { transition: none; }
 }
 /* 手机：放不下一屏，改成正常滚动；指标只留 4 个数字，服务紧跟其后 */
 @media (max-width: 700px) {

@@ -203,7 +203,7 @@ class Sampler:
             "mem_parts": parts,
             "mem_total": self.static["mem_total"],
             "mem_pressure": _PRESSURE.get(level, "ok"),
-            # 「内存压力」那张图的另一面：系统估计的可用比例
+            # 可分页页与空闲页的比例，包含应用正在使用的页，不能当作空闲内存比例
             "mem_free_pct": _sysctl_int("kern.memorystatus_level", ctypes.c_int32),
             "swap_used": swap.used,
             # APFS 各卷共享容量，按「总量 - 可用」算，和访达里看到的一致
