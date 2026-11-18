@@ -367,6 +367,22 @@ categories:
         url: https://www.stirlingpdf.com
         license: MIT（部分高级功能另有授权）
 
+      - name: tasks
+        title: Vikunja
+        desc: 任务和项目管理：列表、看板、甘特图、任务依赖、重复任务；自带 MCP，AI 助手能直接读写
+        for: 好几个项目同时在跑、想让 AI 助手帮着盯进度的人
+        port: 3456
+        health: /api/v1/info
+        icon: vikunja
+        color: "#1973FF"
+        native: true
+        install:
+          macos: 从 dl.vikunja.io 下载 darwin-arm64-full 压缩包，单个可执行文件，用 sqlite 就够；用 launchd 托管
+          linux: 官方 Docker 镜像 vikunja/vikunja，按官方文档挂载 files 和 db 两个目录
+        notes: 配置里 service.publicurl 写 https://tasks.<你的域名>/。建好自己的账号后把 enableregistration 设成 false。MCP 地址是 /api/v2/mcp（2.8 起），用 API 令牌认证。2.4 起有付费的 Pro 插件，基础功能免费。
+        url: https://vikunja.io
+        license: AGPL-3.0
+
   - name: 开发
     services:
       - name: git
