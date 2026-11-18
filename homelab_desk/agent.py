@@ -5,11 +5,16 @@
 - 各服务在线检测，每 10 秒：经本机 Caddy 走一遍（避开浏览器跨域误判，也绕开 macOS 本地网络限制，见 net.py）
 - 插件 collect()，各按自己的 INTERVAL
 在线检测的结果顺带交给 Alerter：服务连续离线 alert.after 分钟发一条通知，恢复后再发一条。
+
+改服务清单不用重启：deploy 先 GET /api/health 比对 fingerprint（代码、端口、插件），
+一致就 POST /-/reload 让 agent 重读 services.yaml，保留下来的服务历史不动。
+/-/reload 不在 /api/ 下，Caddy 不转发，只有本机能调。
 """
 
 from __future__ import annotations
 
 import errno
+import hashlib
 import json
 import queue
 import socket
@@ -21,7 +26,9 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import __version__, metrics, net, plugins
+from pathlib import Path
+
+from . import __version__, config, metrics, net, plugins
 from .config import Config
 
 SYSTEM_EVERY = 2
@@ -38,6 +45,18 @@ def _explain(e: Exception) -> str:
         # 后台运行的 python3 默认没有「本地网络」权限，连局域网设备会这样（见 net.py）
         return "连不上局域网设备：在「系统设置 › 隐私与安全性 › 本地网络」里打开 Python，或改用设备的 Tailscale 地址"
     return f"{type(e).__name__}: {e}"[:200]
+
+
+def fingerprint(cfg: Config) -> str:
+    """换了就得重启 agent 的东西：agent 自己的代码、端口、插件（含参数和代码）。其余配置可以热加载。"""
+    h = hashlib.sha256()
+    pkg = Path(__file__).resolve().parent
+    files = sorted(pkg.rglob("*.py")) + [p for p in (plugins.find(r.name) for r in cfg.plugins) if p]
+    for f in files:
+        h.update(str(f).encode())
+        h.update(f.read_bytes())
+    h.update(json.dumps([cfg.agent_port, [(r.name, r.options) for r in cfg.plugins]], sort_keys=True, default=str).encode())
+    return h.hexdigest()[:16]
 
 
 def _minutes(seconds: float) -> str:
@@ -61,8 +80,17 @@ class Alerter:
         self.bad_since = {}  # 服务名 → 开始不正常的时间
         self.alerted = {}  # 服务名 → 已发过离线通知的那次故障的开始时间
         self.outbox = queue.Queue()
-        if self.enabled:
+        if self.senders:
             threading.Thread(target=self._send_loop, daemon=True).start()
+
+    def reload(self, cfg: Config) -> None:
+        """服务清单变了：删掉的服务不再提醒（也不发恢复）。只在检测线程里调用，和 update 不会同时跑。"""
+        names = {s.name for s in cfg.services}
+        for d in (self.bad_since, self.alerted):
+            for name in [n for n in d if n not in names]:
+                del d[name]
+        self.cfg = cfg
+        self.after = cfg.alert_after * 60
 
     @property
     def enabled(self) -> bool:
@@ -112,11 +140,38 @@ class State:
         self.short = deque(maxlen=SHORT)
         self.long = deque(maxlen=LONG)
         self._bucket = []  # 正在累积的长曲线点
-        self.services = {s.name: {"state": "unknown", "code": 0, "ms": None, "error": "", "since": time.time()} for s in cfg.services}
+        self.services = {s.name: self._blank() for s in cfg.services}
         self.probes = {s.name: deque(maxlen=PROBE_KEEP) for s in cfg.services}  # (时间, 状态, 毫秒)
         self.plugins = plugins.load(cfg)
         self.plugin_data = {p.name: {"title": p.title, "items": [], "error": ""} for p in self.plugins if p.has("collect")}
         self.alerter = Alerter(cfg, self.plugins)
+        self.fingerprint = fingerprint(cfg)
+        self._pending = None  # 待生效的新配置，由检测线程在两轮之间换上
+
+    @staticmethod
+    def _blank() -> dict:
+        return {"state": "unknown", "code": 0, "ms": None, "error": "", "since": time.time()}
+
+    def reload(self) -> dict:
+        """重读 services.yaml。保留下来的服务历史不动，新服务从零开始，删掉的丢弃。"""
+        new = config.load(self.cfg.source)
+        if fingerprint(new) != self.fingerprint:
+            raise RuntimeError("代码、端口或插件变了，需要重启 agent")
+        names = {s.name for s in new.services}
+        with self.lock:
+            old = set(self.services)
+            for s in new.services:
+                if s.name not in self.services:
+                    self.services[s.name] = self._blank()
+                    self.probes[s.name] = deque(maxlen=PROBE_KEEP)
+            for name in old - names:
+                del self.services[name]
+                del self.probes[name]
+            self.cfg = new
+            self._pending = new
+        added, removed = sorted(names - old), sorted(old - names)
+        print(f"已重读服务清单：{len(names)} 个服务" + (f"，新增 {', '.join(added)}" if added else "") + (f"，删除 {', '.join(removed)}" if removed else ""), file=sys.stderr)
+        return {"services": len(names), "added": added, "removed": removed}
 
     # ── 后台循环 ──
     def loop_system(self):
@@ -140,17 +195,21 @@ class State:
     def loop_probe(self):
         pool = ThreadPoolExecutor(max_workers=8)
         while True:
-            results = dict(
-                zip([s.name for s in self.cfg.services], pool.map(lambda s: net.probe_via_caddy(self.cfg, s), self.cfg.services))
-            )
+            with self.lock:
+                cfg, pending, self._pending = self.cfg, self._pending, None
+            if pending:
+                self.alerter.reload(pending)
+            results = dict(zip([s.name for s in cfg.services], pool.map(lambda s: net.probe_via_caddy(cfg, s), cfg.services)))
             now = time.time()
             with self.lock:
                 for name, r in results.items():
+                    if name not in self.services:  # 这一轮检测期间被删掉了
+                        continue
                     old = self.services[name]
                     r["since"] = old["since"] if old["state"] == r["state"] else now
                     self.services[name] = r
                     self.probes[name].append((now, r["state"], r["ms"]))
-            self.alerter.update(results, now)
+            self.alerter.update({n: r for n, r in results.items() if n in self.services}, now)
             time.sleep(PROBE_EVERY)
 
     def loop_plugin(self, p):
@@ -194,9 +253,9 @@ class State:
         return out
 
     def snapshot(self, rng: str = "5m") -> dict:
-        cfg = self.cfg
         now = time.time()
         with self.lock:
+            cfg = self.cfg
             services = []
             for s in cfg.services:
                 r = self.services[s.name]
@@ -241,9 +300,18 @@ def make_handler(state: State):
             if path == "/api/status":
                 self._send(200, state.snapshot("1h" if "range=1h" in query else "5m"))
             elif path == "/api/health":
-                self._send(200, {"ok": True, "version": __version__})
+                self._send(200, {"ok": True, "version": __version__, "fingerprint": state.fingerprint})
             else:
                 self._send(404, {"error": "not found"})
+
+        def do_POST(self):
+            if self.path != "/-/reload" or "X-Forwarded-For" in self.headers:
+                self._send(404, {"error": "not found"})
+                return
+            try:
+                self._send(200, {"ok": True, **state.reload()})
+            except Exception as e:
+                self._send(409, {"ok": False, "error": str(e)})
 
         def log_message(self, fmt, *args):
             pass  # 每 3 秒一次请求，不记

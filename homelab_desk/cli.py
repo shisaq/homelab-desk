@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import errno
+import json
 import os
 import shutil
 import socket
@@ -11,6 +12,7 @@ import ssl
 import subprocess
 import sys
 import time
+import urllib.request
 
 from . import __version__, paths
 from . import caddy as caddymod
@@ -176,6 +178,24 @@ def _wait_https(cfg, host: str, seconds: int) -> str:
     return err
 
 
+def _agent_reload(cfg) -> str:
+    """让正在跑的 agent 重读服务清单（保住历史）。返回空串表示成功，否则是要重启的原因。"""
+    from . import agent
+
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # 不走系统代理
+    base = f"http://127.0.0.1:{cfg.agent_port}"
+    try:
+        with opener.open(f"{base}/api/health", timeout=3) as r:
+            running = json.load(r).get("fingerprint")
+        if running != agent.fingerprint(cfg):
+            return "代码、端口或插件有变化"
+        req = urllib.request.Request(f"{base}/-/reload", data=b"", method="POST")
+        with opener.open(req, timeout=10) as r:
+            return "" if json.load(r).get("ok") else "重读失败"
+    except Exception as e:
+        return f"连不上指标服务（{type(e).__name__}）"
+
+
 def cmd_deploy(a) -> int:
     cfg = cfgmod.load()
     plugins.load(cfg, quiet=True)  # 插件名写错尽早报
@@ -215,8 +235,12 @@ def cmd_deploy(a) -> int:
             service.restart(cfg, "caddy")
             actions["caddy"] = "已重启"
     if actions["agent"] == "未变":
-        service.restart(cfg, "agent")
-        actions["agent"] = "已重启"
+        why = _agent_reload(cfg)
+        if why:
+            service.restart(cfg, "agent")
+            actions["agent"] = f"已重启（{why}）"
+        else:
+            actions["agent"] = "已更新服务清单（历史保留）"
     names = {"caddy": "Caddy", "agent": "指标服务", "checkup": f"每日体检（{cfg.check_time}）"}
     say(OK, "后台服务：" + "，".join(f"{names[k]} {v}" for k, v in actions.items()))
 
