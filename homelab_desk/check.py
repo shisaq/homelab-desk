@@ -157,7 +157,7 @@ def notify(cfg: Config, report: Report) -> list:
     for p in plugins.load(cfg, quiet=True):
         if p.has("notify"):
             try:
-                p.call("notify", report.text(), report.worst)
+                p.notify(report.text(), report.worst, "checkup")
             except Exception as e:
                 errors.append(f"{p.name}: {e}")
     return errors

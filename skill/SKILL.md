@@ -108,7 +108,7 @@ bin/homelab-desk deploy
 - 深浅色：`appearance: auto / light / dark`；用户也可以点页面右上角的按钮临时切换（记在浏览器里）。
 - 图表画法：`charts:` 下 `trend: area / line / bars / blocks`、`gauge: bar / ring / segments`；不写就用主题自带的。
 - 插件：`plugins:` 下加 `temps`、`gpu`、`power` 等，说明见 `docs/plugins.md`。UPS 接在群晖上的，用 `power` 插件的 `nut: ups@NAS的IP`，并在群晖「UPS › 允许的 DiskStation 设备」里加上这台机器的 IP。
-- 体检通知：用 `notify-command` 插件把报告交给用户自己的脚本（发微信、飞书、邮件由那个脚本负责）。
+- 通知：用 `notify-command` 插件把每日体检报告和服务离线 / 恢复提醒交给用户自己的脚本（发微信、飞书、邮件由那个脚本负责）。没开通知插件时，离线只在工作台上变红，不会提醒——搭建时要告诉用户。离线多久才提醒用 `alert.after`（分钟，默认 2，0 关闭）。
 
 ## 排错
 

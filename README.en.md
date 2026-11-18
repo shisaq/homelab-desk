@@ -8,7 +8,7 @@ A **desk** for every service on the always-on machine at home (Mac mini first, L
 - Real HTTPS certificates, renewed automatically
 - **Only your own devices can open it** (Tailscale); no ports exposed to the internet
 - A live dashboard: each service up/down, response time and last-hour history; the machine's CPU (per core), memory composition and pressure, disk, network, temperatures, GPU and UPS
-- A daily health check whose report can go to any notification channel you like
+- A daily health check, plus an alert when a service has been down for 2 minutes and another when it recovers, all deliverable to any notification channel you like
 - Set up by a Claude Code / Codex skill in one sentence; adding a service is one sentence too
 
 ![Liquid glass theme (dark)](docs/screenshots/liquid-dark.jpg)
@@ -90,7 +90,8 @@ Everything lives in one `services.yaml`; see [examples/services.example.yaml](ex
 - **Themes**: `glass` / `liquid` (Apple-style liquid glass) / `paper` / `terminal`, each in light and dark. `appearance: auto / light / dark` sets the default; a button in the top-right corner switches it on the fly. Append `?theme=liquid` to the URL to preview.
 - **Layout**: on desktop everything fits on one screen. CPU, memory, disk, GPU and battery cards fill from the bottom to show their percentage. Memory uses used / total RAM; its color follows memory pressure. The detail overlay (press `D`, or append `?detail`) keeps memory composition, trends and theme-specific charts. Services are grouped lists that pick one of four densities to fit the screen height.
 - **Charts**: each theme has its own chart style — area, bars or text blocks for trends; bars, rings or segments for gauges — overridable under `charts:`. The dashboard shows per-core CPU, memory composition, download and upload as two series, and each service's last hour, with a 5-minute / 1-hour range switch.
-- **Plugins**: temperatures, GPU, UPS / battery, check notifications, or write your own. See [docs/plugins.md](docs/plugins.md).
+- **Notifications**: with a notify plugin such as `notify-command`, both the daily report and down / recovered alerts go through it. `alert.after` (minutes, default 2, 0 = off) sets how long a service must be down before you hear about it.
+- **Plugins**: temperatures, GPU, UPS / battery, notifications, or write your own. See [docs/plugins.md](docs/plugins.md).
 - **Catalog**: 30 recommended services across media, photos, passwords, ad blocking, automation, smart home, AI, file sync, notes, development, monitoring, downloads and reading, each with who it's for, how to install it, and what to watch out for behind a reverse proxy. See [catalog/services.yaml](catalog/services.yaml).
 
 ## Why it's built this way

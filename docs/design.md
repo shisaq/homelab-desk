@@ -47,7 +47,7 @@ plugins:
 | --- | --- | --- |
 | `collect(ctx)` | desk-agent 每隔 `INTERVAL` 秒 | 一组仪表盘指标 `{"title": "温度", "items": [{"label": "CPU", "value": 48.5, "unit": "°C", "max": 100, "level": "ok"}]}` |
 | `check(ctx)` | 每日体检 | `[("ok"/"warn"/"crit", "一行说明"), ...]` |
-| `notify(ctx, report, level)` | 体检结束后 | 把报告发出去 |
+| `notify(ctx, report, level, kind)` | 体检结束后（`kind=checkup`）；服务连续离线 `alert.after` 分钟、或恢复时（`kind=alert`） | 把通知发出去 |
 
 另有模块级常量：`TITLE`、`PLATFORMS = ["darwin", "linux"]`（不符合的平台自动跳过）、`INTERVAL`（秒）。`ctx` 里有插件参数、整份配置、数据目录、日志函数。
 

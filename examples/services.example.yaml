@@ -28,6 +28,10 @@ dns:
 check:
   time: "08:30"
 
+# 服务连续离线几分钟发提醒（恢复时再发一条），经下面的通知插件发出；0 = 关闭
+alert:
+  after: 2
+
 # 插件：仪表盘上多几张指标卡、体检里多几项。可用的见 plugins/ 目录
 plugins:
   - temps                          # 温度
@@ -35,9 +39,9 @@ plugins:
   - power                          # UPS / 电池；UPS 接在 NAS 上的写成下面这样
   # - name: power
   #   nut: ups@192.168.1.10
-  # - name: notify-command         # 把体检报告交给你自己的脚本发出去
+  # - name: notify-command         # 把体检报告和离线提醒交给你自己的脚本发出去
   #   command: ~/.config/homelab-desk/send.sh
-  #   only: warn                   # 只在有问题时发
+  #   only: warn                   # 体检只在有问题时发；离线提醒总会发
 
 # 「在 App 里填写」：不走域名、要手动填地址的东西，点一下复制
 shortcuts: []

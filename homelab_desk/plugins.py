@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import sys
 import traceback
 from dataclasses import dataclass
@@ -42,6 +43,15 @@ class Plugin:
 
     def call(self, fn: str, *args):
         return getattr(self.module, fn)(self.ctx, *args)
+
+    def notify(self, text: str, level: str, kind: str) -> None:
+        """kind：checkup 每日体检 / alert 服务离线或恢复。只写了三个参数的旧插件照常调用。"""
+        fn = getattr(self.module, "notify")
+        params = inspect.signature(fn).parameters.values()
+        if any(p.name == "kind" or p.kind is p.VAR_KEYWORD for p in params):
+            fn(self.ctx, text, level, kind=kind)
+        else:
+            fn(self.ctx, text, level)
 
 
 def find(name: str) -> Path | None:

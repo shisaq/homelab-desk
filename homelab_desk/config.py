@@ -75,6 +75,7 @@ class Config:
     agent_port: int
     allow: list
     check_time: str
+    alert_after: float  # 服务连续离线几分钟发通知；0 = 不发
     plugins: list
     services: list
     shortcuts: list  # 工作台底部「在 App 里填写」的地址：[{title, value, icon}]
@@ -194,6 +195,13 @@ def parse(data: Any, source: Path) -> Config:
     check_time = str(check.get("time") or "08:30")
     if not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", check_time):
         raise ConfigError("check.time 写成 08:30 这样")
+    alert = data.get("alert") or {}
+    try:
+        alert_after = float(alert.get("after", 2))
+    except (TypeError, ValueError):
+        alert_after = -1
+    if alert_after < 0:
+        raise ConfigError("alert.after 写分钟数，如 2；写 0 关闭离线通知")
 
     services = [_service(s, i) for i, s in enumerate(data.get("services") or [])]
     seen = set()
@@ -223,6 +231,7 @@ def parse(data: Any, source: Path) -> Config:
         agent_port=int(agent.get("port") or 18600),
         allow=TAILNET_CIDRS + [str(c) for c in (data.get("allow_extra") or [])],
         check_time=check_time,
+        alert_after=alert_after,
         plugins=[_plugin(p) for p in (data.get("plugins") or [])],
         services=services,
         shortcuts=_shortcuts(data.get("shortcuts")),

@@ -48,8 +48,10 @@ def check(ctx):
     return [("ok", "温度：CPU 48.5°C")]
 
 
-def notify(ctx, report, level):
-    """体检结束后调用。report 是整份纯文本报告，level 是最严重的级别。出错就抛异常。"""
+def notify(ctx, report, level, kind="checkup"):
+    """发通知。report 是整段纯文本，level 是最严重的级别，出错就抛异常。
+    kind = "checkup"：每日体检报告；kind = "alert"：服务离线（level 为 crit）或恢复（level 为 ok）的提醒，
+    由 desk-agent 在后台线程里调用。不写 kind 参数的旧插件照常收到两种通知。"""
 ```
 
 `ctx` 里有：
@@ -77,4 +79,4 @@ def notify(ctx, report, level):
 | `temps` | 温度（Apple 芯片 IOHID；Linux thermal / hwmon） | `warn`、`crit`（摄氏度） |
 | `gpu` | GPU 占用与显存（macOS ioreg；Linux nvidia-smi） | — |
 | `power` | UPS / 电池（macOS pmset；任意平台读 NUT，群晖的「UPS 网络服务器」就是 NUT） | `nut: ups@地址`、`low` |
-| `notify-command` | 把体检报告从标准输入交给你的命令 | `command`、`only: warn` |
+| `notify-command` | 把体检报告和离线 / 恢复提醒从标准输入交给你的命令（环境变量 `HOMELAB_DESK_KIND` 区分两者） | `command`、`only: warn`（只管体检报告） |

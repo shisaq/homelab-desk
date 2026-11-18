@@ -4,12 +4,14 @@
 - 机器指标，每 2 秒
 - 各服务在线检测，每 10 秒：经本机 Caddy 走一遍（避开浏览器跨域误判，也绕开 macOS 本地网络限制，见 net.py）
 - 插件 collect()，各按自己的 INTERVAL
+在线检测的结果顺带交给 Alerter：服务连续离线 alert.after 分钟发一条通知，恢复后再发一条。
 """
 
 from __future__ import annotations
 
 import errno
 import json
+import queue
 import socket
 import sys
 import threading
@@ -38,6 +40,69 @@ def _explain(e: Exception) -> str:
     return f"{type(e).__name__}: {e}"[:200]
 
 
+def _minutes(seconds: float) -> str:
+    m = max(1, round(seconds / 60))
+    return f"{m} 分钟" if m < 60 else f"{m // 60} 小时" + (f" {m % 60} 分钟" if m % 60 else "")
+
+
+class Alerter:
+    """离线通知。只看状态变化：同一次故障只发一次「离线」，恢复时发一次「已恢复」。
+
+    同一轮检测里一起出事的服务合成一条（比如 NAS 断电，上面几个服务一起离线）。
+    发送放在单独的线程里排队，通知命令慢也不耽误检测。
+    """
+
+    BAD = ("down", "error")
+
+    def __init__(self, cfg: Config, loaded: list):
+        self.cfg = cfg
+        self.after = cfg.alert_after * 60
+        self.senders = [p for p in loaded if p.has("notify")]
+        self.bad_since = {}  # 服务名 → 开始不正常的时间
+        self.alerted = {}  # 服务名 → 已发过离线通知的那次故障的开始时间
+        self.outbox = queue.Queue()
+        if self.enabled:
+            threading.Thread(target=self._send_loop, daemon=True).start()
+
+    @property
+    def enabled(self) -> bool:
+        return self.after > 0 and bool(self.senders)
+
+    def update(self, results: dict, now: float) -> None:
+        if not self.enabled:
+            return
+        down, back = [], []
+        for s in self.cfg.services:
+            r = results.get(s.name)
+            if r is None:
+                continue
+            if r["state"] in self.BAD:
+                start = self.bad_since.setdefault(s.name, now)
+                if s.name not in self.alerted and now - start >= self.after:
+                    self.alerted[s.name] = start
+                    why = r["error"] or f"返回 {r['code']}"
+                    down.append(f"🔴 {s.title} 离线 {_minutes(now - start)}：{why}\n   {self.cfg.url(self.cfg.host(s))}")
+            else:
+                self.bad_since.pop(s.name, None)
+                start = self.alerted.pop(s.name, None)
+                if start is not None:
+                    back.append(f"✅ {s.title} 已恢复，离线约 {_minutes(now - start)}")
+        stamp = time.strftime("%Y-%m-%d %H:%M", time.localtime(now))
+        if down:
+            self.outbox.put(("crit", "\n".join([f"# {self.cfg.title} · 服务离线 · {stamp}", *down])))
+        if back:
+            self.outbox.put(("ok", "\n".join([f"# {self.cfg.title} · 服务恢复 · {stamp}", *back])))
+
+    def _send_loop(self):
+        while True:
+            level, text = self.outbox.get()
+            for p in self.senders:
+                try:
+                    p.notify(text, level, "alert")
+                except Exception as e:
+                    p.ctx.log(f"离线通知没发出去：{e}")
+
+
 class State:
     def __init__(self, cfg: Config):
         self.cfg = cfg
@@ -51,6 +116,7 @@ class State:
         self.probes = {s.name: deque(maxlen=PROBE_KEEP) for s in cfg.services}  # (时间, 状态, 毫秒)
         self.plugins = plugins.load(cfg)
         self.plugin_data = {p.name: {"title": p.title, "items": [], "error": ""} for p in self.plugins if p.has("collect")}
+        self.alerter = Alerter(cfg, self.plugins)
 
     # ── 后台循环 ──
     def loop_system(self):
@@ -84,6 +150,7 @@ class State:
                     r["since"] = old["since"] if old["state"] == r["state"] else now
                     self.services[name] = r
                     self.probes[name].append((now, r["state"], r["ms"]))
+            self.alerter.update(results, now)
             time.sleep(PROBE_EVERY)
 
     def loop_plugin(self, p):
@@ -189,4 +256,9 @@ def serve(cfg: Config) -> None:
     state.start()
     srv = ThreadingHTTPServer(("127.0.0.1", cfg.agent_port), make_handler(state))
     print(f"desk-agent {__version__} 在 127.0.0.1:{cfg.agent_port}，{len(cfg.services)} 个服务，插件：{', '.join(p.name for p in state.plugins) or '无'}", file=sys.stderr)
+    a = state.alerter
+    if a.enabled:
+        print(f"离线通知：连续离线 {cfg.alert_after:g} 分钟后经 {', '.join(p.name for p in a.senders)} 发出", file=sys.stderr)
+    else:
+        print("离线通知：未开启（" + ("alert.after 为 0" if a.after <= 0 else "没有带 notify 的插件，如 notify-command") + "）", file=sys.stderr)
     srv.serve_forever()
